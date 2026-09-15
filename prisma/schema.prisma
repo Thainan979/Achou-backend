@@ -1,0 +1,76 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum StatusProduto {
+  RASCUNHO
+  PENDENTE
+  PUBLICADO
+  ERRO
+}
+
+model Loja {
+  id      String   @id @default(cuid())
+  nome    String   @unique
+  slug    String   @unique
+  ativo   Boolean  @default(true)
+  ofertas Oferta[]
+}
+
+model Categoria {
+  id       String    @id @default(cuid())
+  nome     String    @unique
+  slug     String    @unique
+  produtos Produto[]
+}
+
+model Produto {
+  id              String        @id @default(cuid())
+  nome            String
+  slug            String        @unique
+  descricao       String?
+  imagemPrincipal String?
+  status          StatusProduto @default(PENDENTE)
+
+  categoriaId String
+  categoria   Categoria @relation(fields: [categoriaId], references: [id])
+
+  ofertas Oferta[]
+
+  menorPreco        Decimal? @db.Decimal(10, 2)
+  menorPrecoLojaId  String?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([status])
+  @@index([categoriaId])
+}
+
+model Oferta {
+  id String @id @default(cuid())
+
+  produtoId String
+  produto   Produto @relation(fields: [produtoId], references: [id])
+
+  lojaId String
+  loja   Loja   @relation(fields: [lojaId], references: [id])
+
+  preco         Decimal  @db.Decimal(10, 2)
+  precoAnterior Decimal? @db.Decimal(10, 2)
+  frete         String?
+  avaliacao     String?
+  linkOriginal  String
+  linkAfiliado  String?
+  disponivel    Boolean  @default(true)
+
+  ultimaAtualizacao DateTime @default(now())
+
+  @@unique([produtoId, lojaId])
+  @@index([disponivel])
+}
