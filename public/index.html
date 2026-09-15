@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Achou — compare e ache o menor preço</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#14171A; --paper-2:#1D2226; --paper-3:#252A2F;
+    --ink:#ECE9E2; --ink-soft:#9A9D9F;
+    --gold:#B8935A; --gold-deep:#8F6F3E; --gold-soft:rgba(184,147,90,0.14);
+    --red:#A6433D; --line: rgba(236,233,226,0.12); --radius:4px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:'Work Sans', sans-serif; -webkit-font-smoothing:antialiased;}
+  h1,h2,h3,.display{font-family:'Fraunces', serif; font-weight:600; margin:0; letter-spacing:-0.01em;}
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  a{color:inherit; text-decoration:none;}
+  button{font-family:inherit; cursor:pointer; border:none; background:none;}
+  .wrap{max-width:1160px; margin:0 auto; padding:0 28px;}
+  a:focus-visible, button:focus-visible, input:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+
+  header{position:sticky; top:0; z-index:50; background:rgba(20,23,26,0.92); backdrop-filter:blur(6px); border-bottom:1px solid var(--line);}
+  .header-inner{display:flex; align-items:center; justify-content:space-between; height:76px;}
+  .logo{display:flex; align-items:center; gap:10px; font-family:'Fraunces', serif; font-size:22px; font-weight:600;}
+  .logo .tag{width:22px;height:22px; background:var(--gold); border-radius:2px 2px 2px 10px; position:relative; flex:none;}
+  .logo .tag::after{content:""; position:absolute; top:6px; left:6px; width:5px; height:5px; background:var(--paper); border-radius:50%;}
+  nav{display:flex; gap:32px; font-size:15px; color:var(--ink-soft);}
+  nav a:hover{color:var(--ink);}
+  .cta-small{background:var(--gold); color:#14171A; padding:10px 18px; border-radius:var(--radius); font-size:14px; font-weight:600;}
+  .cta-small:hover{background:#CBA672;}
+  @media (max-width:800px){ nav{display:none;} }
+
+  .hero{padding:64px 0 56px; border-bottom:1px solid var(--line);}
+  .hero-grid{display:grid; grid-template-columns:1.1fr 0.9fr; gap:56px; align-items:center;}
+  @media (max-width:900px){ .hero-grid{grid-template-columns:1fr;} }
+  .hero h1{font-size:44px; line-height:1.1; max-width:15ch;}
+  .hero p.lede{margin-top:18px; font-size:17px; color:var(--ink-soft); max-width:38ch; line-height:1.5;}
+  .search-box{margin-top:32px; display:flex; background:var(--paper-2); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; max-width:480px;}
+  .search-box input{flex:1; border:none; padding:15px 16px; font-size:15px; font-family:inherit; background:transparent; color:var(--ink);}
+  .search-box input::placeholder{color:#6E7274;}
+  .search-box button{background:var(--gold); color:#14171A; padding:0 22px; font-size:14px; font-weight:600;}
+  .search-box button:hover{background:#CBA672;}
+  .chips{display:flex; gap:8px; margin-top:20px; flex-wrap:wrap;}
+  .chip{padding:7px 14px; border:1px solid var(--line); border-radius:20px; font-size:13.5px; color:var(--ink-soft); background:var(--paper-2);}
+  .chip.active, .chip:hover{border-color:var(--gold); color:var(--gold); background:var(--gold-soft);}
+
+  .tag-stack{position:relative; height:300px;}
+  .price-tag{position:absolute; width:230px; padding:16px 18px 18px; background:var(--paper-2); border:1px solid var(--line); clip-path: polygon(0 0, 88% 0, 100% 50%, 88% 100%, 0 100%);}
+  .price-tag .store{font-size:12px; color:var(--ink-soft); margin-bottom:8px;}
+  .price-tag .price{font-family:'IBM Plex Mono', monospace; font-size:22px; font-weight:600; color:var(--ink);}
+  .price-tag.t1{top:0; left:40px; transform:rotate(-4deg); opacity:0.6;}
+  .price-tag.t2{top:70px; left:0; transform:rotate(3deg); opacity:0.75;}
+  .price-tag.t3{top:130px; left:56px; transform:rotate(-1.5deg); border-color:var(--gold); box-shadow:0 10px 30px rgba(184,147,90,0.14); z-index:2;}
+  .price-tag.t3 .price{color:var(--gold);}
+  .badge-low{position:absolute; top:-11px; right:14px; background:var(--gold); color:#14171A; font-size:11px; padding:4px 8px; border-radius:3px; font-weight:600;}
+
+  .section{padding:52px 0;}
+  .section-head{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:26px;}
+  .section-head h2{font-size:26px;}
+  .section-head .sub{color:var(--ink-soft); font-size:14.5px;}
+  .empty-msg{color:var(--ink-soft); font-size:14.5px;}
+
+  .cat-row{display:flex; gap:14px; overflow-x:auto; padding-bottom:4px;}
+  .cat-card{flex:none; width:150px; padding:20px 16px; background:var(--paper-2); border-radius:var(--radius); border:1px solid var(--line);}
+  .cat-card .name{font-weight:600; font-size:15px; color:var(--ink);}
+
+  .grid{display:grid; grid-template-columns:repeat(3, 1fr); gap:20px;}
+  @media (max-width:900px){ .grid{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:600px){ .grid{grid-template-columns:1fr;} }
+  .card{background:var(--paper-2); border:1px solid var(--line); border-radius:var(--radius); display:flex; flex-direction:column; overflow:hidden;}
+  .card .thumb{height:150px; position:relative;}
+  .card .discount{position:absolute; top:10px; left:10px; background:var(--red); color:#F3E9E8; font-size:12px; font-weight:600; padding:3px 7px; border-radius:2px;}
+  .card .body{padding:16px; display:flex; flex-direction:column; gap:10px; flex:1;}
+  .card .name{font-size:15px; font-weight:500; line-height:1.35; color:var(--ink);}
+  .card .prices{display:flex; align-items:baseline; gap:8px;}
+  .card .price-now{font-family:'IBM Plex Mono', monospace; font-size:19px; font-weight:600; color:var(--gold);}
+  .card .price-old{font-family:'IBM Plex Mono', monospace; font-size:13px; color:#6E7274; text-decoration:line-through;}
+  .stores{display:flex; gap:6px; flex-wrap:wrap; margin-top:2px;}
+  .store-chip{font-size:11.5px; padding:3px 7px; border-radius:2px; border:1px solid var(--line); color:var(--ink-soft);}
+  .store-chip.best{border-color:var(--gold); color:var(--gold); font-weight:600;}
+  .card .compare-btn{margin-top:auto; text-align:left; font-size:13.5px; font-weight:600; color:var(--gold); padding-top:6px; border-top:1px solid var(--line);}
+  .card .compare-btn:hover{color:#CBA672;}
+
+  .steps{display:grid; grid-template-columns:repeat(3,1fr); gap:28px;}
+  @media (max-width:800px){ .steps{grid-template-columns:1fr;} }
+  .step .num{font-family:'IBM Plex Mono', monospace; font-size:14px; color:var(--gold); margin-bottom:10px;}
+  .step h3{font-size:17px; font-weight:600; margin-bottom:8px; font-family:'Work Sans', sans-serif;}
+  .step p{font-size:14.5px; color:var(--ink-soft); line-height:1.5; margin:0;}
+
+  footer{border-top:1px solid var(--line); padding:40px 0; margin-top:20px;}
+  .foot-inner{display:flex; justify-content:space-between; flex-wrap:wrap; gap:20px;}
+  .foot-note{font-size:13px; color:var(--ink-soft); max-width:60ch; line-height:1.6;}
+
+  #product{display:none;}
+  .back-link{display:inline-flex; align-items:center; gap:6px; font-size:14px; color:var(--ink-soft); margin:28px 0 8px;}
+  .back-link:hover{color:var(--ink);}
+  .product-layout{display:grid; grid-template-columns:1fr 1fr; gap:48px; padding:24px 0 40px;}
+  @media (max-width:850px){ .product-layout{grid-template-columns:1fr;} }
+  .gallery-main{height:340px; border-radius:6px; margin-bottom:10px; border:1px solid var(--line);}
+  .p-name{font-size:28px; font-family:'Fraunces',serif; font-weight:600; line-height:1.2;}
+  .p-price-row{display:flex; align-items:baseline; gap:12px; margin-top:20px;}
+  .p-price-now{font-family:'IBM Plex Mono', monospace; font-size:34px; font-weight:600; color:var(--gold);}
+  .p-price-old{font-family:'IBM Plex Mono', monospace; font-size:16px; color:#6E7274; text-decoration:line-through;}
+  .p-store-line{font-size:13.5px; color:var(--ink-soft); margin-top:6px;}
+  .buy-btn{display:inline-block; margin-top:22px; background:var(--gold); color:#14171A; padding:14px 26px; font-size:15px; font-weight:600; border-radius:var(--radius);}
+  .buy-btn:hover{background:#CBA672;}
+  .p-desc{margin-top:26px; font-size:14.5px; color:var(--ink-soft); line-height:1.6; max-width:44ch;}
+  .offers-table{width:100%; border-collapse:collapse; margin-top:14px; font-size:14px;}
+  .offers-table th{text-align:left; padding:10px 12px; font-size:12.5px; color:var(--ink-soft); border-bottom:1px solid var(--line); font-weight:500;}
+  .offers-table td{padding:12px 12px; border-bottom:1px solid var(--line); color:var(--ink);}
+  .offers-table tr.best-row{background:var(--gold-soft);}
+  .offers-table .cell-price{font-family:'IBM Plex Mono', monospace; font-weight:600;}
+  .offers-table .go{color:var(--gold); font-weight:600; font-size:13px;}
+  .offers-table .go:hover{text-decoration:underline;}
+  .demo-banner{background:var(--gold-soft); border:1px solid var(--gold); color:var(--gold); font-size:13px; padding:10px 16px; text-align:center;}
+</style>
+</head>
+<body>
+
+<div class="demo-banner" id="demo-banner" style="display:none;">
+  Mostrando dados de exemplo — não consegui falar com a API agora.
+</div>
+
+<header>
+  <div class="wrap header-inner">
+    <div class="logo"><span class="tag"></span>Achou</div>
+    <nav><a href="#categorias">Categorias</a><a href="#ofertas">Ofertas</a><a href="#como-funciona">Como funciona</a></nav>
+    <a href="#ofertas" class="cta-small">Ver ofertas</a>
+  </div>
+</header>
+
+<main id="home">
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <h1>Ache o mesmo produto pelo menor preço</h1>
+        <p class="lede">A gente junta as ofertas do Mercado Livre, Shopee e SHEIN num só lugar. Você compara, escolhe onde sai mais barato e compra direto na loja.</p>
+        <div class="search-box"><input type="text" placeholder="O que você está procurando?" aria-label="Buscar produto"><button type="button">Buscar</button></div>
+        <div class="chips" id="chips">
+          <span class="chip active" data-cat="todas">Todas</span>
+        </div>
+      </div>
+      <div class="tag-stack" aria-hidden="true">
+        <div class="price-tag t1"><div class="store">SHEIN</div><div class="price">R$ 199</div></div>
+        <div class="price-tag t2"><div class="store">Shopee</div><div class="price">R$ 179</div></div>
+        <div class="price-tag t3"><span class="badge-low">menor preço</span><div class="store">Mercado Livre</div><div class="price">R$ 159</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="categorias">
+    <div class="wrap"><div class="section-head"><h2>Categorias</h2></div><div class="cat-row" id="cat-row"></div></div>
+  </section>
+
+  <section class="section" id="ofertas">
+    <div class="wrap">
+      <div class="section-head"><h2>Ofertas em destaque</h2><span class="sub">Preços comparados agora mesmo</span></div>
+      <div class="grid" id="product-grid"></div>
+    </div>
+  </section>
+
+  <section class="section" id="como-funciona">
+    <div class="wrap">
+      <div class="section-head"><h2>Como funciona</h2></div>
+      <div class="steps">
+        <div class="step"><div class="num mono">1</div><h3>Você pesquisa</h3><p>Digite o produto ou navegue por categoria. Filtre por preço, loja, avaliação e desconto.</p></div>
+        <div class="step"><div class="num mono">2</div><h3>A gente compara</h3><p>Mostramos o mesmo produto nas lojas em que ele está à venda, lado a lado, com o menor preço em destaque.</p></div>
+        <div class="step"><div class="num mono">3</div><h3>Você compra na loja</h3><p>Escolhe a melhor oferta e é levado direto para a loja de origem para fechar a compra.</p></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<main id="product">
+  <div class="wrap">
+    <a href="#" class="back-link" onclick="goHome(event)">← Voltar para as ofertas</a>
+    <div class="product-layout">
+      <div><div class="gallery-main" id="p-image"></div></div>
+      <div>
+        <div class="p-name" id="p-name"></div>
+        <div class="p-price-row"><div class="p-price-now" id="p-price"></div><div class="p-price-old" id="p-price-old"></div></div>
+        <div class="p-store-line" id="p-store-line"></div>
+        <a href="#" class="buy-btn" id="p-buy" target="_blank" rel="nofollow sponsored">Comprar</a>
+        <div class="p-desc"><p id="p-desc"></p></div>
+        <table class="offers-table" id="offers-table">
+          <thead><tr><th>Loja</th><th>Preço</th><th>Frete</th><th>Avaliação</th><th></th></tr></thead>
+          <tbody id="offers-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap foot-inner">
+    <div class="logo"><span class="tag"></span>Achou</div>
+    <p class="foot-note">Achou é um comparador de ofertas. Não vendemos produtos diretamente — ao clicar em "Comprar", você é direcionado para a loja de origem através de um link de afiliado, o que pode gerar comissão para o Achou sem custo adicional para você.</p>
+  </div>
+</footer>
+
+<script>
+  const PALETTE = ["#233241","#2E2620","#2E2230","#2B2436","#1E2E28","#302A1E"];
+  const SEED = [
+    { id:"p1", nome:"Fone de ouvido Bluetooth com cancelamento de ruído", categoria:{nome:"Eletrônicos", slug:"eletronicos"}, descricao:"Cancelamento de ruído ativo, até 30h de bateria.", ofertas:[{preco:159, precoAnterior:199, frete:"Grátis", avaliacao:"4.8", loja:{nome:"Mercado Livre"}, linkOriginal:"#"},{preco:179, precoAnterior:199, frete:"R$ 12", avaliacao:"4.6", loja:{nome:"Shopee"}, linkOriginal:"#"}] },
+    { id:"p2", nome:"Air fryer 4L digital", categoria:{nome:"Casa", slug:"casa"}, descricao:"Painel digital com 8 funções pré-programadas.", ofertas:[{preco:229, precoAnterior:299, frete:"Grátis", avaliacao:"4.7", loja:{nome:"Shopee"}, linkOriginal:"#"}] },
+  ];
+
+  function money(v){ return "R$ " + Number(v).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
+  function colorFor(id){ let h=0; for(const c of String(id)) h += c.charCodeAt(0); return PALETTE[h % PALETTE.length]; }
+
+  let products = [];
+  let usandoDemo = false;
+
+  async function carregar(){
+    try{
+      const res = await fetch('/api/products?status=PUBLICADO');
+      if(!res.ok) throw new Error('resposta ruim');
+      const data = await res.json();
+      products = data.filter(p => p.ofertas && p.ofertas.length > 0);
+      usandoDemo = false;
+    }catch(e){
+      products = SEED;
+      usandoDemo = true;
+    }
+    document.getElementById('demo-banner').style.display = usandoDemo ? 'block' : 'none';
+    montarCategorias();
+    renderGrid('todas');
+  }
+
+  function montarCategorias(){
+    const nomes = [...new Map(products.filter(p=>p.categoria).map(p => [p.categoria.slug || p.categoria.nome, p.categoria])).values()];
+    const chips = document.getElementById('chips');
+    const catRow = document.getElementById('cat-row');
+    chips.innerHTML = `<span class="chip active" data-cat="todas">Todas</span>` +
+      nomes.map(c => `<span class="chip" data-cat="${c.slug || c.nome}">${c.nome}</span>`).join('');
+    catRow.innerHTML = nomes.map(c => `<div class="cat-card"><div class="name">${c.nome}</div></div>`).join('') ||
+      `<p class="empty-msg">Nenhuma categoria ainda.</p>`;
+    chips.querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        chips.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        renderGrid(chip.dataset.cat);
+      });
+    });
+  }
+
+  function bestOffer(p){ return p.ofertas.reduce((a,b)=> Number(a.preco) < Number(b.preco) ? a : b); }
+
+  function renderGrid(filter){
+    const grid = document.getElementById('product-grid');
+    const list = products.filter(p => filter === 'todas' || (p.categoria && (p.categoria.slug === filter || p.categoria.nome === filter)));
+    if(list.length === 0){
+      grid.innerHTML = `<p class="empty-msg">Nenhuma oferta publicada nessa categoria ainda.</p>`;
+      return;
+    }
+    grid.innerHTML = list.map(p => {
+      const best = bestOffer(p);
+      const oldPrice = best.precoAnterior;
+      const discount = oldPrice ? Math.round(100 * (1 - best.preco / oldPrice)) : 0;
+      return `
+      <div class="card">
+        <div class="thumb" style="background:${colorFor(p.id)};">
+          ${discount > 0 ? `<span class="discount">-${discount}%</span>` : ''}
+        </div>
+        <div class="body">
+          <div class="name">${p.nome}</div>
+          <div class="prices">
+            <span class="price-now">${money(best.preco)}</span>
+            ${oldPrice ? `<span class="price-old">${money(oldPrice)}</span>` : ''}
+          </div>
+          <div class="stores">
+            ${p.ofertas.map(o => `<span class="store-chip ${o.loja.nome===best.loja.nome?'best':''}">${o.loja.nome} ${money(o.preco)}</span>`).join('')}
+          </div>
+          <button class="compare-btn" onclick="openProduct('${p.id}')">Ver comparação →</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function openProduct(id){
+    const p = products.find(x => x.id === id);
+    const best = bestOffer(p);
+    document.getElementById('p-image').style.background = colorFor(p.id);
+    document.getElementById('p-name').textContent = p.nome;
+    document.getElementById('p-price').textContent = money(best.preco);
+    document.getElementById('p-price-old').textContent = best.precoAnterior ? money(best.precoAnterior) : '';
+    document.getElementById('p-store-line').textContent = "Melhor preço em " + best.loja.nome;
+    document.getElementById('p-desc').textContent = p.descricao || '';
+    document.getElementById('p-buy').textContent = "Comprar na " + best.loja.nome;
+    document.getElementById('p-buy').href = best.linkOriginal || '#';
+
+    document.getElementById('offers-body').innerHTML = p.ofertas
+      .slice().sort((a,b)=>a.preco-b.preco)
+      .map(o => `<tr class="${o.loja.nome===best.loja.nome?'best-row':''}">
+        <td>${o.loja.nome}</td><td class="cell-price">${money(o.preco)}</td>
+        <td>${o.frete || '—'}</td><td>${o.avaliacao || '—'}</td>
+        <td><a href="${o.linkOriginal}" class="go" target="_blank" rel="nofollow sponsored">Ir para a loja</a></td>
+      </tr>`).join('');
+
+    document.getElementById('home').style.display = 'none';
+    document.getElementById('product').style.display = 'block';
+    window.scrollTo(0,0);
+  }
+  function goHome(e){
+    e.preventDefault();
+    document.getElementById('product').style.display = 'none';
+    document.getElementById('home').style.display = 'block';
+    window.scrollTo(0,0);
+  }
+
+  carregar();
+</script>
+
+</body>
+</html>
