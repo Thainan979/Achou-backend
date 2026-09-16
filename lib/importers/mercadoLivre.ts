@@ -11,15 +11,15 @@ export type ImportedOffer = {
  * do Mercado Livre. Cobre os formatos mais comuns de link.
  */
 function extractItemId(url: string): string | null {
-  const patterns = [
-    /(MLB-?\d{8,})/i, // formato clássico: MLB-1234567890 ou MLB1234567890
-  ];
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) {
-      return match[1].replace("-", "").toUpperCase();
-    }
-  }
+  let match = url.match(/item_id[:=](MLB\d+)/i);
+  if (match) return match[1].toUpperCase();
+
+  match = url.match(/wid=(MLB\d+)/i);
+  if (match) return match[1].toUpperCase();
+
+  match = url.match(/(MLB-?\d{8,})/i);
+  if (match) return match[1].replace("-", "").toUpperCase();
+
   return null;
 }
 
