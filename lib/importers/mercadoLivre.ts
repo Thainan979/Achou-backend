@@ -38,7 +38,7 @@ export async function importFromMercadoLivre(url: string): Promise<ImportedOffer
   const response = await fetch(`https://api.mercadolibre.com/items/${itemId}`);
   if (!response.ok) {
     throw new Error(
-      "O Mercado Livre não retornou dados para esse anúncio (pode ter sido removido ou o link está incompleto)."
+      `Código identificado: ${itemId}. O Mercado Livre respondeu com erro ${response.status}.`
     );
   }
 
