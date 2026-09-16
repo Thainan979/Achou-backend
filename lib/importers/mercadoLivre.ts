@@ -6,10 +6,6 @@ export type ImportedOffer = {
   originalUrl: string;
 };
 
-/**
- * Extrai o ID do anúncio (ex: "MLB1234567890") de uma URL de produto
- * do Mercado Livre. Cobre os formatos mais comuns de link.
- */
 function extractItemId(url: string): string | null {
   let match = url.match(/item_id[:=](MLB\d+)/i);
   if (match) return match[1].toUpperCase();
@@ -23,10 +19,6 @@ function extractItemId(url: string): string | null {
   return null;
 }
 
-/**
- * Busca os dados reais do produto na API pública do Mercado Livre.
- * Documentação: https://api.mercadolibre.com/items/{ITEM_ID}
- */
 export async function importFromMercadoLivre(url: string): Promise<ImportedOffer> {
   const itemId = extractItemId(url);
   if (!itemId) {
@@ -40,6 +32,12 @@ export async function importFromMercadoLivre(url: string): Promise<ImportedOffer
       "User-Agent": "Mozilla/5.0 (compatible; AchouBot/1.0)",
       "Accept": "application/json",
     },
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Código identificado: ${itemId}. O Mercado Livre respondeu com erro ${response.status}.`
+    );
   }
 
   const data = await response.json();
