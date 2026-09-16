@@ -35,11 +35,11 @@ export async function importFromMercadoLivre(url: string): Promise<ImportedOffer
     );
   }
 
-  const response = await fetch(`https://api.mercadolibre.com/items/${itemId}`);
-  if (!response.ok) {
-    throw new Error(
-      `Código identificado: ${itemId}. O Mercado Livre respondeu com erro ${response.status}.`
-    );
+  const response = await fetch(`https://api.mercadolibre.com/items/${itemId}`, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (compatible; AchouBot/1.0)",
+      "Accept": "application/json",
+    },
   }
 
   const data = await response.json();
