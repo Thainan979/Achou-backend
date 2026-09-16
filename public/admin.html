@@ -207,6 +207,11 @@
       <button type="button" class="btn-ghost" onclick="importarLink()">Importar</button>
     </div>
     <p id="import-msg" class="msg"></p>
+    <div class="import-row" style="flex-direction:column; align-items:stretch;">
+      <textarea id="shopee-text" placeholder="Ou cole aqui o texto que a Shopee copia no botão &quot;Copiar Informação&quot;" style="min-height:70px; margin-bottom:8px;"></textarea>
+      <button type="button" class="btn-ghost" onclick="importarTextoShopee()">Usar texto da Shopee</button>
+    </div>
+    <p id="shopee-msg" class="msg"></p>
 
     <form id="product-form" onsubmit="salvarProduto(event)">
       <input type="hidden" id="f-id">
@@ -423,7 +428,33 @@
     document.getElementById('modal-bg').style.display = 'flex';
   }
   function fecharModal(){ document.getElementById('modal-bg').style.display = 'none'; }
+function importarTextoShopee(){
+    const text = document.getElementById('shopee-text').value.trim();
+    const msg = document.getElementById('shopee-msg');
+    if(!text){ msg.textContent = 'Cole o texto primeiro.'; msg.className = 'msg err'; return; }
 
+    const match = text.match(/Dê uma olhada em (.+?) por R\$\s?([\d.,]+)(?:\s*-\s*R\$\s?([\d.,]+))?\.?\s*Compre na Shopee agora!\s*(https?:\/\/\S+)/i);
+    if(!match){
+      msg.textContent = 'Não consegui reconhecer esse texto. Confere se copiou pelo botão "Copiar Informação".';
+      msg.className = 'msg err';
+      return;
+    }
+
+    const nome = match[1].trim();
+    const preco = parseFloat(match[2].replace(/\./g,'').replace(',', '.'));
+    const link = match[4].trim();
+
+    document.getElementById('f-nome').value = nome;
+    const shopee = lojas.find(l => l.nome === 'Shopee');
+    if(shopee){
+      document.getElementById('chk-' + shopee.id).checked = true;
+      document.getElementById('fields-' + shopee.id).classList.remove('disabled');
+      document.getElementById('price-' + shopee.id).value = preco;
+      document.getElementById('link-' + shopee.id).value = link;
+    }
+    msg.textContent = 'Dados preenchidos — confira e ajuste antes de salvar.';
+    msg.className = 'msg ok';
+  }
   async function importarLink(){
     const url = document.getElementById('import-url').value.trim();
     const msg = document.getElementById('import-msg');
