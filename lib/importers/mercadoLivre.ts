@@ -4,6 +4,8 @@ export type ImportedOffer = {
   price: number;
   image: string | null;
   originalUrl: string;
+  frete: string | null;
+  avaliacao: string | null;
 };
 
 function extractItemId(url: string): string | null {
@@ -27,12 +29,12 @@ export async function importFromMercadoLivre(url: string): Promise<ImportedOffer
     );
   }
 
-  const response = await fetch(`https://api.mercadolibre.com/items/${itemId}`, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; AchouBot/1.0)",
-      "Accept": "application/json",
-    },
-  });
+  const headers = {
+    "User-Agent": "Mozilla/5.0 (compatible; AchouBot/1.0)",
+    "Accept": "application/json",
+  };
+
+  const response = await fetch(`https://api.mercadolibre.com/items/${itemId}`, { headers });
 
   if (!response.ok) {
     throw new Error(
@@ -42,11 +44,28 @@ export async function importFromMercadoLivre(url: string): Promise<ImportedOffer
 
   const data = await response.json();
 
+  const frete = data.shipping?.free_shipping ? "Grátis" : null;
+
+  let avaliacao: string | null = null;
+  try {
+    const reviewsRes = await fetch(`https://api.mercadolibre.com/reviews/item/${itemId}`, { headers });
+    if (reviewsRes.ok) {
+      const reviewsData = await reviewsRes.json();
+      if (reviewsData.rating_average) {
+        avaliacao = Number(reviewsData.rating_average).toFixed(1);
+      }
+    }
+  } catch {
+    // se a avaliação falhar, segue sem ela — não impede a importação
+  }
+
   return {
     store: "Mercado Livre",
     title: data.title,
     price: data.price,
     image: data.thumbnail ? data.thumbnail.replace("http://", "https://") : null,
     originalUrl: data.permalink || url,
+    frete,
+    avaliacao,
   };
 }
