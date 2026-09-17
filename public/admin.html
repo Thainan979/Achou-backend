@@ -469,11 +469,13 @@ function importarTextoShopee(){
       }
       document.getElementById('f-nome').value = r.data.title;
       const ml = lojas.find(l => l.nome === 'Mercado Livre');
-      if(ml){
+            if(ml){
         document.getElementById('chk-' + ml.id).checked = true;
         document.getElementById('fields-' + ml.id).classList.remove('disabled');
         document.getElementById('price-' + ml.id).value = r.data.price;
         document.getElementById('link-' + ml.id).value = r.data.originalUrl;
+        if(r.data.frete) document.getElementById('frete-' + ml.id).value = r.data.frete;
+        if(r.data.avaliacao) document.getElementById('rating-' + ml.id).value = r.data.avaliacao;
       }
       msg.textContent = 'Dados importados — confira e ajuste antes de salvar.';
       msg.className = 'msg ok';
