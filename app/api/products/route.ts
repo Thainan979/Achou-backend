@@ -37,7 +37,8 @@ export async function POST(req: NextRequest) {
     data: {
       nome: body.nome,
       slug: `${slug}-${Date.now().toString(36)}`,
-      descricao: body.descricao || null,
+            descricao: body.descricao || null,
+      imagemPrincipal: body.imagemPrincipal || null,
       status: body.status || "PENDENTE",
       categoriaId: body.categoriaId,
       ofertas: body.ofertas
