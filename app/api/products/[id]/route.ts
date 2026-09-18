@@ -18,8 +18,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const produto = await prisma.produto.update({
     where: { id: params.id },
     data: {
-      nome: body.nome,
+            nome: body.nome,
       descricao: body.descricao,
+      imagemPrincipal: body.imagemPrincipal,
       status: body.status,
       categoriaId: body.categoriaId,
     },
