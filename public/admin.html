@@ -231,8 +231,8 @@
           </select>
         </div>
       </div>
+           <div class="field"><label>Imagem (URL)</label><input type="url" id="f-imagem" placeholder="Cole o link de uma foto do produto"></div>
       <div class="field"><label>Descrição</label><textarea id="f-desc"></textarea></div>
-
       <label style="margin-bottom:10px; display:block;">Ofertas por loja</label>
       <div id="store-blocks"></div>
 
@@ -418,7 +418,8 @@
       document.getElementById('f-nome').value = p.nome;
       preencherCategorias(p.categoria ? p.categoria.id : null);
       document.getElementById('f-status').value = p.status;
-      document.getElementById('f-desc').value = p.descricao || '';
+            document.getElementById('f-desc').value = p.descricao || '';
+      document.getElementById('f-imagem').value = p.imagemPrincipal || '';
       buildStoreBlocks(p.ofertas.map(o => ({ ...o, lojaId: o.loja.id })));
     } else {
       document.getElementById('modal-title').textContent = 'Novo produto';
@@ -473,7 +474,8 @@ function importarTextoShopee(){
         document.getElementById('chk-' + ml.id).checked = true;
         document.getElementById('fields-' + ml.id).classList.remove('disabled');
         document.getElementById('price-' + ml.id).value = r.data.price;
-        document.getElementById('link-' + ml.id).value = r.data.originalUrl;
+                document.getElementById('link-' + ml.id).value = r.data.originalUrl;
+        if(r.data.image) document.getElementById('f-imagem').value = r.data.image;
         if(r.data.frete) document.getElementById('frete-' + ml.id).value = r.data.frete;
         if(r.data.avaliacao) document.getElementById('rating-' + ml.id).value = r.data.avaliacao;
       }
@@ -511,7 +513,8 @@ function importarTextoShopee(){
       nome: document.getElementById('f-nome').value,
       categoriaId: document.getElementById('f-categoria').value,
       status: document.getElementById('f-status').value,
-      descricao: document.getElementById('f-desc').value,
+            descricao: document.getElementById('f-desc').value,
+      imagemPrincipal: document.getElementById('f-imagem').value || null,
       ofertas,
     };
 
