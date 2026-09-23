@@ -231,7 +231,15 @@
           </select>
         </div>
       </div>
-           <div class="field"><label>Imagem (URL)</label><input type="url" id="f-imagem" placeholder="Cole o link de uma foto do produto"></div>
+                <div class="field">
+        <label>Imagem</label>
+        <input type="url" id="f-imagem" placeholder="Cole o link de uma foto, ou envie abaixo">
+        <div style="display:flex; gap:8px; margin-top:8px; align-items:center;">
+          <input type="file" id="f-imagem-file" accept="image/*" style="flex:1; font-size:13px;">
+          <button type="button" class="btn-ghost" onclick="enviarFoto()">Enviar foto</button>
+        </div>
+        <p id="upload-msg" class="msg"></p>
+      </div>
       <div class="field"><label>Descrição</label><textarea id="f-desc"></textarea></div>
       <label style="margin-bottom:10px; display:block;">Ofertas por loja</label>
       <div id="store-blocks"></div>
@@ -455,6 +463,29 @@ function importarTextoShopee(){
     }
     msg.textContent = 'Dados preenchidos — confira e ajuste antes de salvar.';
     msg.className = 'msg ok';
+  }
+    async function enviarFoto(){
+    const fileInput = document.getElementById('f-imagem-file');
+    const msg = document.getElementById('upload-msg');
+    if(!fileInput.files[0]){ msg.textContent = 'Escolha uma foto primeiro.'; msg.className = 'msg err'; return; }
+    msg.textContent = 'Enviando...'; msg.className = 'msg';
+    try{
+      const form = new FormData();
+      form.append('image', fileInput.files[0]);
+      const res = await fetch(apiUrl('/api/upload-image'), {
+        method: 'POST',
+        headers: { 'x-admin-key': API_KEY },
+        body: form
+      });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error || 'Falha no envio');
+      document.getElementById('f-imagem').value = data.url;
+      msg.textContent = 'Foto enviada!';
+      msg.className = 'msg ok';
+    }catch(e){
+      msg.textContent = 'Erro: ' + e.message;
+      msg.className = 'msg err';
+    }
   }
   async function importarLink(){
     const url = document.getElementById('import-url').value.trim();
