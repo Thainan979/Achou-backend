@@ -139,7 +139,7 @@
       <div>
         <h1>Ache o mesmo produto pelo menor preço</h1>
         <p class="lede">A gente junta as ofertas do Mercado Livre, Shopee e SHEIN num só lugar. Você compara, escolhe onde sai mais barato e compra direto na loja.</p>
-        <div class="search-box"><input type="text" placeholder="O que você está procurando?" aria-label="Buscar produto"><button type="button">Buscar</button></div>
+                <div class="search-box"><input type="text" id="search-input" placeholder="O que você está procurando?" aria-label="Buscar produto" onkeydown="if(event.key==='Enter'){event.preventDefault(); buscar();}"><button type="button" onclick="buscar()">Buscar</button></div>
         <div class="chips" id="chips">
           <span class="chip active" data-cat="todas">Todas</span>
         </div>
@@ -212,8 +212,15 @@
   function money(v){ return "R$ " + Number(v).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
   function colorFor(id){ let h=0; for(const c of String(id)) h += c.charCodeAt(0); return PALETTE[h % PALETTE.length]; }
 
-  let products = [];
+   let products = [];
   let usandoDemo = false;
+  let currentCategory = 'todas';
+  let searchTerm = '';
+
+  function buscar(){
+    searchTerm = document.getElementById('search-input').value.trim().toLowerCase();
+    renderGrid(currentCategory);
+  }
 
   async function carregar(){
     try{
@@ -240,10 +247,11 @@
     catRow.innerHTML = nomes.map(c => `<div class="cat-card"><div class="name">${c.nome}</div></div>`).join('') ||
       `<p class="empty-msg">Nenhuma categoria ainda.</p>`;
     chips.querySelectorAll('.chip').forEach(chip => {
-      chip.addEventListener('click', () => {
+           chip.addEventListener('click', () => {
         chips.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
-        renderGrid(chip.dataset.cat);
+        currentCategory = chip.dataset.cat;
+        renderGrid(currentCategory);
       });
     });
   }
@@ -252,8 +260,11 @@
 
   function renderGrid(filter){
     const grid = document.getElementById('product-grid');
-    const list = products.filter(p => filter === 'todas' || (p.categoria && (p.categoria.slug === filter || p.categoria.nome === filter)));
-    if(list.length === 0){
+      const list = products.filter(p => {
+      const catOk = filter === 'todas' || (p.categoria && (p.categoria.slug === filter || p.categoria.nome === filter));
+      const searchOk = !searchTerm || p.nome.toLowerCase().includes(searchTerm);
+      return catOk && searchOk;
+    });
       grid.innerHTML = `<p class="empty-msg">Nenhuma oferta publicada nessa categoria ainda.</p>`;
       return;
     }
