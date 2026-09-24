@@ -68,6 +68,11 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   if (!checkAuth(req)) {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
   }
-  await prisma.produto.delete({ where: { id: params.id } });
-  return NextResponse.json({ ok: true });
+  try {
+    await prisma.oferta.deleteMany({ where: { produtoId: params.id } });
+    await prisma.produto.delete({ where: { id: params.id } });
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Erro ao excluir produto." }, { status: 500 });
+  }
 }
