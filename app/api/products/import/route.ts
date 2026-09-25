@@ -15,6 +15,16 @@ function gerarSlug(nome: string) {
     .replace(/(^-|-$)/g, "");
 }
 
+function normalizarLinha(linha: any) {
+  const limpo: any = {};
+  for (const chave in linha) {
+    const chaveLimpa = chave.replace(/^\uFEFF/, "").trim();
+    const valor = typeof linha[chave] === "string" ? linha[chave].trim() : linha[chave];
+    limpo[chaveLimpa] = valor;
+  }
+  return limpo;
+}
+
 const STATUS_VALIDOS = ["RASCUNHO", "PENDENTE", "PUBLICADO", "ERRO"];
 const MAX_LINHAS = 500;
 
@@ -28,21 +38,23 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => null);
-  const linhas = body?.linhas;
+  const linhasBrutas = body?.linhas;
   const confirmar = body?.confirmar === true;
 
-  if (!Array.isArray(linhas)) {
+  if (!Array.isArray(linhasBrutas)) {
     return NextResponse.json({ error: "Envie 'linhas' como um array." }, { status: 400 });
   }
-  if (linhas.length === 0) {
+  if (linhasBrutas.length === 0) {
     return NextResponse.json({ error: "O arquivo está vazio." }, { status: 400 });
   }
-  if (linhas.length > MAX_LINHAS) {
+  if (linhasBrutas.length > MAX_LINHAS) {
     return NextResponse.json(
       { error: `Máximo de ${MAX_LINHAS} linhas por importação. Divida o arquivo em partes menores.` },
       { status: 400 }
     );
   }
+
+  const linhas = linhasBrutas.map(normalizarLinha);
 
   const [categorias, lojas, produtosExistentes] = await Promise.all([
     prisma.categoria.findMany(),
