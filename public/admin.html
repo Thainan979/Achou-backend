@@ -91,6 +91,8 @@
   .status.pendente{background:var(--gold-soft); color:var(--gold);}
   .status.rascunho{background:rgba(154,157,159,0.15); color:var(--ink-soft);}
   .status.erro{background:rgba(166,67,61,0.15); color:var(--red);}
+  .status.ok{background:rgba(94,143,110,0.15); color:var(--green);}
+  .status.ignorado{background:rgba(154,157,159,0.15); color:var(--ink-soft);}
   .row-action{color:var(--gold); font-size:13px; font-weight:600; margin-right:12px;}
   .row-action:hover{text-decoration:underline;}
   .row-action.danger{color:var(--red);}
@@ -98,6 +100,7 @@
 
   .modal-bg{display:none; position:fixed; inset:0; background:rgba(10,12,13,0.7); align-items:flex-start; justify-content:center; padding:24px 12px; overflow-y:auto; z-index:100;}
   .modal{background:var(--paper-2); border:1px solid var(--line); border-radius:8px; width:100%; max-width:560px; padding:26px 24px 28px;}
+  .modal.import-modal{max-width:760px;}
   .modal h2{font-size:20px; margin-bottom:20px;}
   .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
   @media (max-width:480px){ .grid-2{grid-template-columns:1fr;} }
@@ -111,6 +114,7 @@
   .msg{font-size:13px; margin-top:8px;}
   .msg.err{color:var(--red);}
   .msg.ok{color:var(--green);}
+  .csv-preview-wrap{max-height:320px; overflow-y:auto; margin:14px 0; border:1px solid var(--line); border-radius:6px;}
 
   .config-box{max-width:460px;}
 </style>
@@ -152,6 +156,7 @@
           </div>
           <div class="head-actions">
             <button class="btn-ghost" onclick="carregarTudo()">Atualizar</button>
+            <button class="btn-ghost" onclick="abrirModalImport()">Importar CSV</button>
             <button class="btn-primary" id="btn-novo" onclick="abrirModal()">+ Novo produto</button>
           </div>
         </div>
@@ -231,7 +236,7 @@
           </select>
         </div>
       </div>
-                <div class="field">
+      <div class="field">
         <label>Imagem</label>
         <input type="url" id="f-imagem" placeholder="Cole o link de uma foto, ou envie abaixo">
         <div style="display:flex; gap:8px; margin-top:8px; align-items:center;">
@@ -252,6 +257,39 @@
   </div>
 </div>
 
+<div class="modal-bg" id="modal-import-bg">
+  <div class="modal import-modal">
+    <h2>Importar produtos via CSV</h2>
+    <p style="color:var(--ink-soft); font-size:13.5px; margin-bottom:18px;">
+      Baixe o modelo, preencha uma linha por oferta (o mesmo produto em lojas diferentes = linhas diferentes, com o mesmo nome e categoria) e envie o arquivo.
+    </p>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px;">
+      <button type="button" class="btn-ghost" onclick="baixarModeloCSV()">Baixar modelo CSV</button>
+      <input type="file" id="csv-file" accept=".csv" style="flex:1; min-width:180px; font-size:13px;">
+      <button type="button" class="btn-primary" onclick="analisarCSV()">Analisar arquivo</button>
+    </div>
+
+    <p id="csv-msg" class="msg"></p>
+
+    <div id="csv-preview-area" style="display:none;">
+      <div class="stat-row" id="csv-stats" style="grid-template-columns:repeat(3,1fr); margin-bottom:14px;"></div>
+      <div class="csv-preview-wrap">
+        <table class="data">
+          <thead><tr><th>Linha</th><th>Produto</th><th>Preço</th><th>Categoria</th><th>Loja</th><th>Status</th></tr></thead>
+          <tbody id="csv-preview-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn-ghost" onclick="fecharModalImport()">Cancelar</button>
+      <button type="button" class="btn-primary" id="btn-confirmar-import" style="display:none;" onclick="confirmarImportacaoCSV()">Confirmar importação</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
   let API_BASE = localStorage.getItem('achou_api_base') || '';
   let API_KEY = localStorage.getItem('achou_api_key') || '';
@@ -259,6 +297,7 @@
   let produtos = [];
   let categorias = [];
   let lojas = [];
+  let csvLinhasAnalisadas = null;
 
   function apiUrl(path){ return API_BASE.replace(/\/$/,'') + path; }
 
@@ -426,7 +465,7 @@
       document.getElementById('f-nome').value = p.nome;
       preencherCategorias(p.categoria ? p.categoria.id : null);
       document.getElementById('f-status').value = p.status;
-            document.getElementById('f-desc').value = p.descricao || '';
+      document.getElementById('f-desc').value = p.descricao || '';
       document.getElementById('f-imagem').value = p.imagemPrincipal || '';
       buildStoreBlocks(p.ofertas.map(o => ({ ...o, lojaId: o.loja.id })));
     } else {
@@ -437,7 +476,8 @@
     document.getElementById('modal-bg').style.display = 'flex';
   }
   function fecharModal(){ document.getElementById('modal-bg').style.display = 'none'; }
-function importarTextoShopee(){
+
+  function importarTextoShopee(){
     const text = document.getElementById('shopee-text').value.trim();
     const msg = document.getElementById('shopee-msg');
     if(!text){ msg.textContent = 'Cole o texto primeiro.'; msg.className = 'msg err'; return; }
@@ -464,7 +504,8 @@ function importarTextoShopee(){
     msg.textContent = 'Dados preenchidos — confira e ajuste antes de salvar.';
     msg.className = 'msg ok';
   }
-    async function enviarFoto(){
+
+  async function enviarFoto(){
     const fileInput = document.getElementById('f-imagem-file');
     const msg = document.getElementById('upload-msg');
     if(!fileInput.files[0]){ msg.textContent = 'Escolha uma foto primeiro.'; msg.className = 'msg err'; return; }
@@ -501,11 +542,11 @@ function importarTextoShopee(){
       }
       document.getElementById('f-nome').value = r.data.title;
       const ml = lojas.find(l => l.nome === 'Mercado Livre');
-            if(ml){
+      if(ml){
         document.getElementById('chk-' + ml.id).checked = true;
         document.getElementById('fields-' + ml.id).classList.remove('disabled');
         document.getElementById('price-' + ml.id).value = r.data.price;
-                document.getElementById('link-' + ml.id).value = r.data.originalUrl;
+        document.getElementById('link-' + ml.id).value = r.data.originalUrl;
         if(r.data.image) document.getElementById('f-imagem').value = r.data.image;
         if(r.data.frete) document.getElementById('frete-' + ml.id).value = r.data.frete;
         if(r.data.avaliacao) document.getElementById('rating-' + ml.id).value = r.data.avaliacao;
@@ -544,7 +585,7 @@ function importarTextoShopee(){
       nome: document.getElementById('f-nome').value,
       categoriaId: document.getElementById('f-categoria').value,
       status: document.getElementById('f-status').value,
-            descricao: document.getElementById('f-desc').value,
+      descricao: document.getElementById('f-desc').value,
       imagemPrincipal: document.getElementById('f-imagem').value || null,
       ofertas,
     };
@@ -570,6 +611,106 @@ function importarTextoShopee(){
     }catch(e){
       alert('Erro ao excluir: ' + e.message);
     }
+  }
+
+  function abrirModalImport(){
+    if(!configuracaoPronta()) return;
+    document.getElementById('csv-file').value = '';
+    document.getElementById('csv-msg').textContent = '';
+    document.getElementById('csv-msg').className = 'msg';
+    document.getElementById('csv-preview-area').style.display = 'none';
+    document.getElementById('btn-confirmar-import').style.display = 'none';
+    csvLinhasAnalisadas = null;
+    document.getElementById('modal-import-bg').style.display = 'flex';
+  }
+  function fecharModalImport(){ document.getElementById('modal-import-bg').style.display = 'none'; }
+
+  function baixarModeloCSV(){
+    const cabecalho = ['nome','descricao','imagem','categoria','loja','preco','preco_anterior','frete','avaliacao','link_original','link_afiliado','status'];
+    const exemplo = ['Fone Bluetooth','Cancelamento de ruído, 30h de bateria','https://exemplo.com/foto.jpg','Eletrônicos','Mercado Livre','159.90','199.90','Grátis','4.8','https://exemplo.com/produto','','PENDENTE'];
+    const linha = cabecalho.join(',') + '\n' + exemplo.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',') + '\n';
+    const blob = new Blob(["\uFEFF" + linha], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'modelo-produtos-achou.csv';
+    link.click();
+  }
+
+  function analisarCSV(){
+    const file = document.getElementById('csv-file').files[0];
+    const msg = document.getElementById('csv-msg');
+    if(!file){ msg.textContent = 'Selecione um arquivo CSV primeiro.'; msg.className = 'msg err'; return; }
+    msg.textContent = 'Lendo arquivo...'; msg.className = 'msg';
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async function(results){
+        if(results.data.length === 0){
+          msg.textContent = 'O arquivo está vazio.';
+          msg.className = 'msg err';
+          return;
+        }
+        msg.textContent = 'Validando ' + results.data.length + ' linha(s)...';
+        try{
+          const r = await apiSend('/api/products/import', 'POST', { linhas: results.data, confirmar: false });
+          csvLinhasAnalisadas = results.data;
+          renderPreviewCSV(r);
+          msg.textContent = '';
+        }catch(e){
+          msg.textContent = 'Erro: ' + e.message;
+          msg.className = 'msg err';
+        }
+      },
+      error: function(err){
+        msg.textContent = 'Erro ao ler o arquivo: ' + err.message;
+        msg.className = 'msg err';
+      }
+    });
+  }
+
+  function renderPreviewCSV(r){
+    document.getElementById('csv-preview-area').style.display = 'block';
+    document.getElementById('csv-stats').innerHTML = `
+      <div class="stat-card ok"><div class="label">Prontos</div><div class="num mono">${r.prontos}</div></div>
+      <div class="stat-card"><div class="label">Ignorados</div><div class="num mono">${r.ignorados}</div></div>
+      <div class="stat-card err"><div class="label">Com erro</div><div class="num mono">${r.comErro}</div></div>`;
+    document.getElementById('csv-preview-body').innerHTML = r.linhas.map(l => {
+      const cls = l.situacao === 'OK' ? 'ok' : l.situacao === 'IGNORADO' ? 'ignorado' : 'erro';
+      const textoStatus = l.situacao === 'OK' ? 'OK' : l.situacao === 'IGNORADO' ? 'Ignorado' : 'Erro';
+      return `<tr>
+        <td class="mono">${l.linha}</td>
+        <td>${l.nome || '—'}</td>
+        <td class="mono">${l.preco !== null ? 'R$ ' + l.preco : '—'}</td>
+        <td>${l.categoria || '—'}</td>
+        <td>${l.loja || '—'}</td>
+        <td><span class="status ${cls}">${textoStatus}</span>${l.motivo ? `<div style="font-size:11.5px; color:var(--ink-soft); margin-top:3px;">${l.motivo}</div>` : ''}</td>
+      </tr>`;
+    }).join('');
+    const btn = document.getElementById('btn-confirmar-import');
+    if(r.prontos > 0){
+      btn.style.display = 'inline-block';
+      btn.textContent = `Confirmar importação (${r.prontos} produto${r.prontos>1?'s':''})`;
+    } else {
+      btn.style.display = 'none';
+    }
+  }
+
+  async function confirmarImportacaoCSV(){
+    if(!csvLinhasAnalisadas) return;
+    const msg = document.getElementById('csv-msg');
+    msg.textContent = 'Importando...'; msg.className = 'msg';
+    document.getElementById('btn-confirmar-import').disabled = true;
+    try{
+      const r = await apiSend('/api/products/import', 'POST', { linhas: csvLinhasAnalisadas, confirmar: true });
+      msg.textContent = `Importação concluída. ${r.adicionados} produto(s) adicionados, ${r.ignorados} ignorado(s), ${r.comErro} com erro.`;
+      msg.className = 'msg ok';
+      document.getElementById('btn-confirmar-import').style.display = 'none';
+      await carregarTudo();
+    }catch(e){
+      msg.textContent = 'Erro: ' + e.message;
+      msg.className = 'msg err';
+    }
+    document.getElementById('btn-confirmar-import').disabled = false;
   }
 
   function entrar(){
