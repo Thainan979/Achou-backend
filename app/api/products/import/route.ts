@@ -76,7 +76,8 @@ export async function POST(req: NextRequest) {
     produtosExistentes.map((p) => `${p.nome.trim().toLowerCase()}::${p.categoriaId}`)
   );
 
-  const resultado = linhas.map((linha: any, i: number) => {
+  // Primeira passada: valida cada linha individualmente.
+  const linhasValidadas = linhas.map((linha: any, i: number) => {
     const numero = i + 2; // +2: linha 1 do arquivo é o cabeçalho
     const nome = String(linha.nome || "").trim();
     const categoriaChave = String(linha.categoria || "").trim().toLowerCase();
@@ -109,38 +110,62 @@ export async function POST(req: NextRequest) {
     if (!STATUS_VALIDOS.includes(status))
       erros.push("status inválido (use RASCUNHO, PENDENTE, PUBLICADO ou ERRO)");
 
-    let duplicado = false;
-    if (nome && categoria) {
-      duplicado = existentesChave.has(`${nome.toLowerCase()}::${categoria.id}`);
-    }
-
     return {
       linha: numero,
       nome,
-      categoria: categoria?.nome || linha.categoria || "",
-      loja: loja?.nome || linha.loja || "",
+      categoria,
+      categoriaTexto: categoria?.nome || linha.categoria || "",
+      loja,
+      lojaTexto: loja?.nome || linha.loja || "",
       preco: isNaN(preco) ? null : preco,
-      situacao: erros.length ? "ERRO" : duplicado ? "IGNORADO" : "OK",
-      motivo: erros.length ? erros.join("; ") : duplicado ? "produto já cadastrado nessa categoria" : null,
-      _dados:
-        erros.length || duplicado
-          ? null
-          : {
-              nome,
-              descricao: linha.descricao || null,
-              imagemPrincipal: linha.imagem || null,
-              status,
-              categoriaId: categoria!.id,
-              oferta: {
-                lojaId: loja!.id,
-                preco,
-                precoAnterior,
-                frete: linha.frete || null,
-                avaliacao: linha.avaliacao || null,
-                linkOriginal,
-                linkAfiliado: linha.link_afiliado || null,
-              },
-            },
+      precoAnterior,
+      descricao: linha.descricao || null,
+      imagemPrincipal: linha.imagem || null,
+      frete: linha.frete || null,
+      avaliacao: linha.avaliacao || null,
+      linkOriginal,
+      linkAfiliado: linha.link_afiliado || null,
+      status,
+      erros,
+      grupoChave: nome && categoria ? `${nome.toLowerCase()}::${categoria.id}` : null,
+    };
+  });
+
+  // Segunda passada: agrupa linhas válidas por produto (nome + categoria) e
+  // detecta duas ofertas da mesma loja dentro do mesmo grupo.
+  const grupos = new Map<string, typeof linhasValidadas>();
+  linhasValidadas.forEach((l) => {
+    if (l.erros.length > 0 || !l.grupoChave) return;
+    if (!grupos.has(l.grupoChave)) grupos.set(l.grupoChave, []);
+    grupos.get(l.grupoChave)!.push(l);
+  });
+
+  const jaExisteNoBanco = new Set<string>();
+  grupos.forEach((_, chave) => {
+    if (existentesChave.has(chave)) jaExisteNoBanco.add(chave);
+  });
+
+  grupos.forEach((itens) => {
+    const lojasVistas = new Set<string>();
+    itens.forEach((item) => {
+      const lojaId = item.loja!.id;
+      if (lojasVistas.has(lojaId)) {
+        item.erros.push(`loja "${item.lojaTexto}" repetida para o mesmo produto nesta importação`);
+      }
+      lojasVistas.add(lojaId);
+    });
+  });
+
+  const resultado = linhasValidadas.map((l) => {
+    const duplicado = l.grupoChave ? jaExisteNoBanco.has(l.grupoChave) : false;
+    return {
+      linha: l.linha,
+      nome: l.nome,
+      categoria: l.categoriaTexto,
+      loja: l.lojaTexto,
+      preco: l.preco,
+      situacao: l.erros.length ? "ERRO" : duplicado ? "IGNORADO" : "OK",
+      motivo: l.erros.length ? l.erros.join("; ") : duplicado ? "produto já cadastrado nessa categoria" : null,
     };
   });
 
@@ -150,32 +175,44 @@ export async function POST(req: NextRequest) {
       prontos: resultado.filter((r) => r.situacao === "OK").length,
       ignorados: resultado.filter((r) => r.situacao === "IGNORADO").length,
       comErro: resultado.filter((r) => r.situacao === "ERRO").length,
-      linhas: resultado.map(({ _dados, ...r }) => r),
+      linhas: resultado,
     });
   }
 
-  const prontas = resultado.filter((r) => r.situacao === "OK" && r._dados);
   let adicionados = 0;
   let falhasAoSalvar = 0;
 
-  for (const item of prontas) {
-    const d = item._dados!;
+  for (const [chave, itens] of grupos) {
+    if (jaExisteNoBanco.has(chave)) continue;
+    const valid = itens.filter((it) => it.erros.length === 0);
+    if (valid.length === 0) continue;
+    const base = valid[0];
     try {
-      const slug = `${gerarSlug(d.nome)}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+      const slug = `${gerarSlug(base.nome)}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
       await prisma.produto.create({
         data: {
-          nome: d.nome,
+          nome: base.nome,
           slug,
-          descricao: d.descricao,
-          imagemPrincipal: d.imagemPrincipal,
-          status: d.status as any,
-          categoriaId: d.categoriaId,
-          ofertas: { create: [d.oferta] },
+          descricao: valid.find((v) => v.descricao)?.descricao || null,
+          imagemPrincipal: valid.find((v) => v.imagemPrincipal)?.imagemPrincipal || null,
+          status: base.status as any,
+          categoriaId: base.categoria!.id,
+          ofertas: {
+            create: valid.map((v) => ({
+              lojaId: v.loja!.id,
+              preco: v.preco!,
+              precoAnterior: v.precoAnterior,
+              frete: v.frete,
+              avaliacao: v.avaliacao,
+              linkOriginal: v.linkOriginal,
+              linkAfiliado: v.linkAfiliado,
+            })),
+          },
         },
       });
-      adicionados++;
+      adicionados += valid.length;
     } catch {
-      falhasAoSalvar++;
+      falhasAoSalvar += valid.length;
     }
   }
 
