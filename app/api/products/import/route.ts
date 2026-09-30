@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
   let adicionados = 0;
   let falhasAoSalvar = 0;
 
-  for (const [chave, itens] of grupos) {
+    for (const [chave, itens] of Array.from(grupos.entries())) {
     if (jaExisteNoBanco.has(chave)) continue;
     const valid = itens.filter((it: any) => it.erros.length === 0);
     if (valid.length === 0) continue;
