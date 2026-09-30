@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const linhas = linhasBrutas.map(normalizarLinha);
+  const linhas: any[] = linhasBrutas.map(normalizarLinha);
 
   const [categorias, lojas, produtosExistentes] = await Promise.all([
     prisma.categoria.findMany(),
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
   );
 
   // Primeira passada: valida cada linha individualmente.
-  const linhasValidadas = linhas.map((linha: any, i: number) => {
+  const linhasValidadas: any[] = linhas.map((linha: any, i: number) => {
     const numero = i + 2; // +2: linha 1 do arquivo é o cabeçalho
     const nome = String(linha.nome || "").trim();
     const categoriaChave = String(linha.categoria || "").trim().toLowerCase();
@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
 
   // Segunda passada: agrupa linhas válidas por produto (nome + categoria) e
   // detecta duas ofertas da mesma loja dentro do mesmo grupo.
-  const grupos = new Map<string, typeof linhasValidadas>();
+  const grupos = new Map<string, any[]>();
   linhasValidadas.forEach((l) => {
     if (l.erros.length > 0 || !l.grupoChave) return;
     if (!grupos.has(l.grupoChave)) grupos.set(l.grupoChave, []);
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
   grupos.forEach((itens) => {
     const lojasVistas = new Set<string>();
     itens.forEach((item) => {
-      const lojaId = item.loja!.id;
+      const lojaId = item.loja.id;
       if (lojasVistas.has(lojaId)) {
         item.erros.push(`loja "${item.lojaTexto}" repetida para o mesmo produto nesta importação`);
       }
@@ -184,7 +184,7 @@ export async function POST(req: NextRequest) {
 
   for (const [chave, itens] of grupos) {
     if (jaExisteNoBanco.has(chave)) continue;
-    const valid = itens.filter((it) => it.erros.length === 0);
+    const valid = itens.filter((it: any) => it.erros.length === 0);
     if (valid.length === 0) continue;
     const base = valid[0];
     try {
@@ -193,14 +193,14 @@ export async function POST(req: NextRequest) {
         data: {
           nome: base.nome,
           slug,
-          descricao: valid.find((v) => v.descricao)?.descricao || null,
-          imagemPrincipal: valid.find((v) => v.imagemPrincipal)?.imagemPrincipal || null,
+          descricao: valid.find((v: any) => v.descricao)?.descricao || null,
+          imagemPrincipal: valid.find((v: any) => v.imagemPrincipal)?.imagemPrincipal || null,
           status: base.status as any,
-          categoriaId: base.categoria!.id,
+          categoriaId: base.categoria.id,
           ofertas: {
-            create: valid.map((v) => ({
-              lojaId: v.loja!.id,
-              preco: v.preco!,
+            create: valid.map((v: any) => ({
+              lojaId: v.loja.id,
+              preco: v.preco,
               precoAnterior: v.precoAnterior,
               frete: v.frete,
               avaliacao: v.avaliacao,
