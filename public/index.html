@@ -160,7 +160,7 @@
 
   <section class="section" id="ofertas">
     <div class="wrap">
-      <div class="section-head"><h2>Ofertas em destaque</h2><span class="sub">Preços comparados agora mesmo</span></div>
+           <div class="section-head"><h2>Ofertas em destaque</h2><span class="sub" id="ofertas-sub">Preços comparados agora mesmo</span></div>
       <div class="grid" id="product-grid"></div>
     </div>
   </section>
@@ -235,9 +235,19 @@
       products = SEED;
       usandoDemo = true;
     }
-    document.getElementById('demo-banner').style.display = usandoDemo ? 'block' : 'none';
+      document.getElementById('demo-banner').style.display = usandoDemo ? 'block' : 'none';
+    atualizarResumoOfertas();
     montarCategorias();
     renderGrid('todas');
+  }
+
+   function atualizarResumoOfertas(){
+    const totalOfertas = products.reduce((acc, p) => acc + (p.ofertas ? p.ofertas.length : 0), 0);
+    const el = document.getElementById('ofertas-sub');
+    if(!el) return;
+    el.textContent = totalOfertas > 0
+      ? `${totalOfertas} oferta${totalOfertas > 1 ? 's' : ''} comparada${totalOfertas > 1 ? 's' : ''} agora mesmo`
+      : 'Preços comparados agora mesmo';
   }
 
   function montarCategorias(){
